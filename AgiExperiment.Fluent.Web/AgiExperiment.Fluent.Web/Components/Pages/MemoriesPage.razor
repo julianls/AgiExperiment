@@ -1,0 +1,137 @@
+﻿@using AgiExperiment.AI.Cortex.Memories
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+@using Microsoft.KernelMemory;
+
+@inject IToastService ToastService
+@inject IServiceProvider ServiceProvider
+
+@page "/memories"
+@attribute [Authorize]
+
+@rendermode InteractiveServer
+
+<h3>Memories</h3>
+
+<FluentInputFile Id="my-file-uploader"
+                 Mode="InputFileMode.SaveToTemporaryFolder"
+                 Multiple="true"
+                 MaximumFileCount="4"
+                 MaximumFileSize="@(10*1024*1024)"
+                 Accept="@_fileExtensions"
+                 @bind-ProgressPercent="@ProgressPercent"
+                 OnCompleted="@OnCompletedAsync"
+                 Style="height: 300px;">
+    <ChildContent>
+        <label for="my-file-uploader">
+            <FluentIcon Value="@(new @Size24.ArrowUpload())" />
+        </label>
+
+        <div>
+            Drag files here you wish to upload,
+            or <label for="my-file-uploader">browse</label>
+            for them<span style="color: red;">*</span>.
+            <br />
+            <em>Maximum of 4 files allowed.</em>
+        </div>
+
+        <div>
+            <br />
+            <a href="#">Read more about our supported file formats.</a>
+        </div>
+    </ChildContent>
+</FluentInputFile>
+
+@if (Files.Any())
+{
+    <h4>File(s) uploaded:</h4>
+    <ul>
+        @foreach (var file in Files)
+        {
+            <li>
+                <b>@file.Name</b> 🔹
+                @($"{Decimal.Divide(file.Size, 1024):N} KB") 🔹
+                @file.ContentType 🔹
+                @file.LocalFile?.FullName
+                @file.ErrorMessage
+            </li>
+        }
+    </ul>
+}
+
+<MemoriesList Index="@_index" />
+
+@code
+{
+    string _fileExtensions = @"
+      application/msword,
+      application/vnd.openxmlformats-officedocument.wordprocessingml.document,
+      application/vnd.ms-excel,
+      application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,
+      application/vnd.ms-powerpoint,
+      application/vnd.openxmlformats-officedocument.presentationml.presentation,
+      application/pdf,
+      text/markdown,
+      text/x-markdown,
+      text/html,
+      image/jpeg,
+      image/png,
+      image/tiff,
+      application/json";
+
+
+    int ProgressPercent = 0;
+    FluentInputFileEventArgs[] Files = Array.Empty<FluentInputFileEventArgs>();
+    string? _index = MemoriesService.IndexDefault;
+    private MemoriesService docService;
+
+    protected override async Task OnInitializedAsync()
+    {
+        docService = ServiceProvider.GetRequiredService<MemoriesService>();
+    }
+
+    private void IndexChanged(string newIndex)
+    {
+        _index = newIndex;
+        StateHasChanged();
+    }
+
+    private async Task OnCompletedAsync(IEnumerable<FluentInputFileEventArgs> files)
+    {
+        Files = files.ToArray();
+
+        // For the demo, delete these files.
+        foreach (var file in Files)
+        {
+            var documentId = file.Name.CleanKmDocumentId();
+            var doc = new Document(documentId);
+            //var target = _filesToUpload.First(o => o.File.Name == file.Name);
+            try
+            {
+                // max bytes allowed in the server api is 30000000 bytes
+                //var maxLength = 30000000;
+                var fileStream = File.OpenRead(file.LocalFile.FullName);
+                var ms = new MemoryStream();
+                await fileStream.CopyToAsync(ms);
+                doc.AddStream(file.Name, ms);
+                await docService.SaveDoc(doc, _index);
+                //target.Status = 1;
+                await InvokeAsync(StateHasChanged);
+            }
+            catch (Exception exception)
+            {
+                ToastService.ShowToast(ToastIntent.Error, exception.Message);
+                //target.Status = 3;
+                await InvokeAsync(StateHasChanged);
+            }
+
+            file.LocalFile?.Delete();
+        }
+
+        // Wait 3 seconds before to reset the progress bar.
+        await Task.Delay(3000);
+        ProgressPercent = 0;
+
+        await docService.UploadFinished(Files.Count());
+    }
+}

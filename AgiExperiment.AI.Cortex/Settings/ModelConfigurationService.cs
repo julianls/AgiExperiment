@@ -1,0 +1,75 @@
+﻿using AgiExperiment.AI.Cortex.Pipeline;
+using AgiExperiment.AI.Cortex.Pipeline.Interceptors;
+using AgiExperiment.AI.Domain.Data;
+using Microsoft.Extensions.Options;
+using Microsoft.SemanticKernel.Memory;
+
+namespace AgiExperiment.AI.Cortex.Settings;
+
+public class ModelConfigurationService
+{
+    private const string StorageKey = "agiexp_model";
+    readonly ILocalStorageService? _localStorageService;
+    readonly PipelineOptions _pipelineOptions;
+   
+    ModelConfiguration? _userConfig { get; set; }
+    
+    public ModelConfigurationService(ILocalStorageService localStorageService, IOptions<PipelineOptions>? pipelineOptions)
+    {
+        _localStorageService = localStorageService;
+        _pipelineOptions = pipelineOptions?.Value ?? throw new ArgumentNullException(nameof(pipelineOptions));
+    }
+
+    public ModelConfiguration GetDefaultConfig()
+    {
+        return new ModelConfiguration()
+        {
+            Provider = _pipelineOptions.Providers.GetChatModelsProvider(),
+            Model = _pipelineOptions.Providers.GetChatModel(),
+            MaxTokens = _pipelineOptions.MaxTokens,
+            MaxPlannerTokens = _pipelineOptions.MaxPlannerTokens,
+            Temperature = 0.0f,
+            EmbeddingsModel = _pipelineOptions.Providers.GetEmbeddingsModel(),
+            EmbeddingsProvider = _pipelineOptions.Providers.GetEmbeddingsModelProvider()
+        };
+    }
+
+    public async Task<ModelConfiguration> GetConfig()
+    {
+        if (_userConfig != null) 
+            return _userConfig;
+
+        ModelConfiguration? model = null;
+        try
+        {
+            model = await _localStorageService!.GetItemAsync<ModelConfiguration?>(StorageKey);
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+            throw;
+        }
+        
+        if (model == null)
+        {
+            model = GetDefaultConfig();
+            await SaveConfig(model);
+        }
+ 
+        return model;
+    }
+
+    public async Task SaveConfig(ModelConfiguration model)
+    {
+        _userConfig = model;
+        await _localStorageService!.SetItemAsync(StorageKey, _userConfig);
+    }
+
+    public async Task Reset()
+    {
+        _userConfig = null;
+        await _localStorageService!.RemoveItemAsync(StorageKey);
+    }
+
+}
+

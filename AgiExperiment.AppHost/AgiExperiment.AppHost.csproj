@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <Sdk Name="Aspire.AppHost.Sdk" Version="9.0.0" />
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>fc445c95-ee16-46cf-a8d6-4274663382a4</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\AgiExperiment.AI.ServiceHost\AgiExperiment.AI.ServiceHost.csproj" />
+    <ProjectReference Include="..\AgiExperiment.ApiService\AgiExperiment.ApiService.csproj" />
+    <ProjectReference Include="..\AgiExperiment.Fluent.Web\AgiExperiment.Fluent.Web\AgiExperiment.Fluent.Web.csproj" />
+    <ProjectReference Include="..\AgiExperiment.MCP.AspNetCoreSseServer\AgiExperiment.MCP.AspNetCoreSseServer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Aspire.Hosting.AppHost" Version="9.4.2" />
+    <PackageReference Include="Aspire.Hosting.Redis" Version="9.4.2" />
+  </ItemGroup>
+
+</Project>

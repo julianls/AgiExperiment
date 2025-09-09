@@ -1,0 +1,22 @@
+﻿<div class="custom-node @(Node.Selected ? " selected" : "")">
+    <FluentCard>
+        <p>Model context.</p>
+
+        <input type="text" class="form-control"
+               @bind-value="Node.Answer"
+               placeholder="Answer"
+        @onpointerdown:stopPropagation
+        @onpointerup:stopPropagation
+        @onpointermove:stopPropagation />
+        <FluentButton Appearance="Appearance.Accent">Hello</FluentButton>
+    </FluentCard>
+    @foreach (var port in Node.Ports)
+    {
+        <PortRenderer @key="port" Port="port"></PortRenderer>
+    }
+</div>
+
+@code {
+    [Parameter]
+    public ModelContextNode Node { get; set; }
+}

@@ -1,0 +1,106 @@
+@using AgiExperiment.AI.Cortex.Settings
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular;
+@using System.Security.Claims;
+
+@implements IDisposable
+
+@inject IDialogService DialogService;
+
+<FluentCounterBadge Count="@_selected.Count()" Appearance="Appearance.Neutral">
+    <FluentButton Appearance="Appearance.Accent" OnClick="OpenSettings">
+        Interceptors
+    </FluentButton>
+</FluentCounterBadge>
+
+@code
+{
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+    public string UserId { get; set; } = null!;
+
+    [Parameter] 
+    public string? Class { get; set; }
+
+    [Parameter] 
+    public Action<IEnumerable<string>>? OnSettingsChangedAction { get; set; }
+
+    [Inject] 
+    public required InterceptorConfigurationService InterceptorConfigurationService { get; set; }
+
+    [Inject]
+    public required SettingsStateNotificationService SettingsStateNotificationService { get; set; }
+
+    bool _reload = false;
+
+    private IEnumerable<string> _selected = new List<string>();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState != null)
+        {
+            var authState = await AuthenticationState;
+            var user = authState?.User;
+            if (user?.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                UserId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            }
+        }
+
+        SettingsStateNotificationService.OnUpdate += SettingsChanged;
+    }
+
+    private async Task SettingsChanged(SettingsChangedNotification obj)
+    {
+        // if (obj.UserId != UserId || obj.Type == typeof(InterceptorSelector))
+        // {
+        //     return;
+        // }
+
+        _reload = true;
+        await InvokeAsync(StateHasChanged);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender || _reload)
+        {
+            _selected = await GetBrowserSettings();
+            await InvokeAsync(StateHasChanged);
+            _reload = false;
+        }
+    }
+
+    private async Task OpenSettings()
+    {
+        DialogParameters parameters = new()
+            {
+                Title = $"Select interceptors",
+                PrimaryAction = "Ok",
+                PrimaryActionEnabled = true,
+                Width = "500px",
+                Height = "500px",
+                TrapFocus = true,
+                Modal = true,
+                PreventScroll = true
+            };
+
+        await DialogService.ShowDialogAsync<InterceptorSelector>(parameters);
+
+        _selected = await GetBrowserSettings();
+        if (OnSettingsChangedAction != null)
+        {
+            OnSettingsChangedAction.Invoke(_selected);
+        }
+    }
+
+    private async Task<IEnumerable<string>> GetBrowserSettings()
+    {
+        var list = await InterceptorConfigurationService.GetConfig();
+        return list;
+    }
+
+    public void Dispose()
+    {
+        SettingsStateNotificationService.OnUpdate -= SettingsChanged;
+    }
+}

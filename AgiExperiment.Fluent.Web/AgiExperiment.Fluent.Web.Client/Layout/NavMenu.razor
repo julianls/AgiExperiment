@@ -1,0 +1,60 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+
+@rendermode InteractiveAuto
+
+@implements IDisposable
+
+@inject NavigationManager NavigationManager
+
+<div class="navmenu">
+    <input type="checkbox" title="Menu expand/collapse toggle" id="navmenu-toggle" class="navmenu-icon" />
+    <label for="navmenu-toggle" class="navmenu-icon"><FluentIcon Value="@(new Size20.Navigation())" Color="Color.Fill" /></label>
+    <nav class="sitenav" aria-labelledby="main-menu">
+        <FluentNavMenu Id="main-menu" Width="250" Collapsible="true" Title="Navigation menu" @bind-Expanded="expanded" CustomToggle="true">
+            <FluentNavLink Href="/" Match="NavLinkMatch.All" Icon="@(new Size20.Home())" IconColor="Color.Accent">Home</FluentNavLink>
+            <FluentNavLink Href="auth" Icon="@(new Size20.LockClosedKey())" IconColor="Color.Accent">Auth Required</FluentNavLink>
+            <AuthorizeView>
+                <Authorized>
+                    <FluentNavLink Href="conversation" Icon="@(new Size20.Chat())" IconColor="Color.Accent">New</FluentNavLink>
+                    <FluentNavLink Href="conversations" Icon="@(new Size20.History())" IconColor="Color.Accent">History</FluentNavLink>
+                    <FluentNavLink Href="diagrams" Icon="@(new Size20.List())" IconColor="Color.Accent">Diagrams</FluentNavLink>
+                    <FluentNavLink Href="diagram" Icon="@(new Size20.Diagram())" IconColor="Color.Accent">Diagram</FluentNavLink>
+                    <FluentNavLink Href="memories" Icon="@(new Size20.Thinking())" IconColor="Color.Accent">Memories</FluentNavLink>
+                    <FluentNavLink Href="Account/Manage">@context.User.Identity?.Name</FluentNavLink>
+                    <form action="Account/Logout" method="post">
+                        <AntiforgeryToken />
+                        <input type="hidden" name="ReturnUrl" value="@currentUrl" />
+                        <FluentButton Type="ButtonType.Submit" Style="width: 100%;">Logout</FluentButton>
+                    </form>
+                </Authorized>
+                <NotAuthorized>
+                    <FluentNavLink Href="Account/Register">Register</FluentNavLink>
+                    <FluentNavLink Href="Account/Login">Login</FluentNavLink>
+                </NotAuthorized>
+            </AuthorizeView>
+        </FluentNavMenu>
+    </nav>
+</div>
+
+@code {
+    private bool expanded = true;
+
+    private string? currentUrl;
+
+    protected override void OnInitialized()
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(NavigationManager.Uri);
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    private void OnLocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        currentUrl = NavigationManager.ToBaseRelativePath(e.Location);
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= OnLocationChanged;
+    }
+}

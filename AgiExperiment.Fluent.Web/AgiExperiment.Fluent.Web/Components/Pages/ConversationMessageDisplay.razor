@@ -1,0 +1,60 @@
+﻿@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+
+@rendermode InteractiveServer
+
+<FluentStack Orientation="Orientation.Horizontal"
+             HorizontalAlignment="HorizontalAlignment.Stretch"
+             VerticalAlignment="VerticalAlignment.Center"
+             HorizontalGap="10">
+    @if (Message.Role == ConversationRole.System)
+    {
+        <FluentIcon Value="@(new Size24.BrainCircuit())" />
+        <div Style="flex-grow: 1;">
+            <MarkdownContent Content="@Message.Content" />
+        </div>
+    }
+    else if (Message.Role == ConversationRole.Assistant)
+    {
+        <FluentIcon Value="@(new Size24.Brain())" />
+        <div Style="flex-grow: 1;">
+            <MarkdownContent Content="@Message.Content" />
+        </div>
+    }
+    else
+    {
+        <FluentIcon Value="@(new Size24.Person())" />
+        <div Style="background-color:#494949; border:1px; border-radius: 20px; margin:5px 5px 5px 25px; padding:10px;flex-grow: 1;">
+            <MarkdownContent Content="@Message.Content" />
+        </div>
+    }
+</FluentStack>
+
+@if (Message.MessageAttachments.Any())
+{
+    <!-- File area -->
+    <FluentStack Orientation="Orientation.Horizontal"
+                 HorizontalAlignment="HorizontalAlignment.Stretch"
+                 VerticalAlignment="VerticalAlignment.Bottom"
+                 HorizontalGap="10"
+                 Style="padding: 0px;">
+        @foreach (var file in Message.MessageAttachments)
+        {
+            <div style="background-color:#494949; border:1px; border-radius: 20px; padding:10px;">
+                <p>
+                    <b>@file.Name</b> 🔹
+                    @($"{Decimal.Divide(file.Content.LongCount(), 1024):N} KB") 🔹
+                    @file.ContentType
+                </p>
+            </div>
+        }
+    </FluentStack>
+}
+
+@if (!string.IsNullOrEmpty(Message.ActionLog))
+{
+<FluentAccordion>
+    <FluentAccordionItem Heading="Tool usage ...">
+        <MarkdownContent Content="@Message.ActionLog" />
+    </FluentAccordionItem>
+</FluentAccordion>
+}

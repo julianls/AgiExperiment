@@ -1,0 +1,43 @@
+﻿@page "/diagram/{DiagramId:guid?}"
+
+@using Microsoft.AspNetCore.Authorization
+
+@rendermode InteractiveServer
+
+@attribute [Authorize]
+
+<FluentStack Orientation="Orientation.Vertical"
+             VerticalGap="5"
+             Style="position: absolute; z-index: 10; width:auto;">
+    <FluentButton OnClick="@AddNode">Add a node</FluentButton>
+    <FluentButton OnClick="@RemoveNode">Remove a node</FluentButton>
+    <FluentButton OnClick="@AddPort">Add a port to the selected node</FluentButton>
+    <FluentButton OnClick="@RemovePort">Delete a port from the selected node</FluentButton>
+    <FluentButton OnClick="@AddLink">Add a link between two selected nodes</FluentButton>
+    <FluentButton OnClick="@SaveDiagram">Save Diagram</FluentButton>
+    <FluentButton OnClick="@RunDiagram">Run Diagram</FluentButton>
+    <div class="text-center" draggable="true" @ondragstart="() => OnDragStart(0)">
+        <div style="pointer-events:none;">
+            <img class="d-block m-auto" src="StaticFiles/img/DefaultNodeWidget.png" />
+            <span>Default Node</span>
+        </div>
+    </div>
+    <div class="text-center" draggable="true" @ondragstart="() => OnDragStart(1)">
+        <div style="pointer-events:none;">
+            <img class="d-block m-auto" src="StaticFiles/img/BotAnswerNodeWidget.png" />
+            <span>Bot Answer Node</span>
+        </div>
+    </div>
+    <div class="text-center" draggable="true" @ondragstart="() => OnDragStart(2)">
+        <div style="pointer-events:none;">
+            <img class="d-block m-auto" src="StaticFiles/img/ModelContextNodeWidget.png" />
+            <span>Model Context Node</span>
+        </div>
+    </div>
+</FluentStack>
+
+<div ondragover="event.preventDefault();" @ondragover:preventDefault @ondrop="OnDrop" style="width: 100%; height:100%;">
+    <CascadingValue Value="BlazorDiagram">
+        <DiagramCanvas></DiagramCanvas>
+    </CascadingValue>
+</div>

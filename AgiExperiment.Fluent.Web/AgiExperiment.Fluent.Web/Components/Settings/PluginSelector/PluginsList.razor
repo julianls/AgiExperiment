@@ -1,0 +1,15 @@
+@using AgiExperiment.AI.Cortex.Settings.PluginSelector;
+
+@rendermode InteractiveServer
+
+ @inject IDialogService DialogService;
+
+<FluentDataGrid Items="@Content.AsQueryable()" TGridItem="PluginSelection">
+    <SelectColumn TGridItem="PluginSelection" 
+        SelectMode="DataGridSelectMode.Multiple" 
+        Property="@(e => e.Selected)"
+        OnSelect="@(e => e.Item.Selected = e.Selected)"
+        SelectAll="@(Content.All(p => p.Selected))"
+        SelectAllChanged="@(all => Content.ToList().ForEach(p => p.Selected = (all == true)))" SelectedItemsChanged="@OnSelectionChanged" />
+    <PropertyColumn Property="@(p => p.Name)" Title="Name" />
+</FluentDataGrid>

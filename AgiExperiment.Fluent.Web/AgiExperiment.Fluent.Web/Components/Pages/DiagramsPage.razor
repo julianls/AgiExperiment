@@ -1,0 +1,160 @@
+﻿@page "/diagrams"
+
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+
+@rendermode InteractiveServer
+
+@inject IToastService ToastService
+@inject IDialogService dialogService
+
+@attribute [Authorize]
+<PageTitle>Diagrams</PageTitle>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <h3>Diagrams</h3>
+        </div>
+        <div class="col">
+            @if (Diagrams.Any())
+            {
+                <FluentButton Disabled="@(SelectedItems == null || !SelectedItems.Any())" OnClick="DeleteSelectedDiagrams">Delete selected</FluentButton>
+            }
+            <FluentButton aria-label="Create diagram" IconEnd="@(new Size24.AddCircle())" OnClick="@(() => AddDiagram())" />
+        </div>
+    </div>
+</div>
+
+<FluentDataGrid ID="grid" Items="@Diagrams.AsQueryable()" ShowHover="@true" TGridItem="DiagramModel">
+    <SelectColumn TGridItem="DiagramModel"
+    SelectMode="@DataGridSelectMode.Multiple"
+    Property="@(e => e.Selected)"
+    OnSelect="@(e => e.Item.Selected = e.Selected)"
+    SelectAll="@(Diagrams.All(p => p.Selected))"
+    SelectAllChanged="@(all => Diagrams.ToList().ForEach(p => p.Selected = (all == true)))"/>
+    <PropertyColumn Title="Title" Property="@(c => c!.Title)" Align="Align.Start" />
+    <TemplateColumn Title="Actions" Align="@Align.End">
+        <FluentButton aria-label="Load diagram" IconEnd="@(new Size16.Navigation())" OnClick="@(() => NavigateTo(context))" />
+        <FluentButton aria-label="Delete diagram" IconEnd="@(new Size16.Delete())" OnClick="@(() => Remove(context))" />
+    </TemplateColumn>
+</FluentDataGrid>
+
+@code {
+    [Inject]
+    public IDbContextFactory<AiExperimentDBContext> DbContextFactory { get; set; } = null!;
+
+    [Inject]
+    public DiagramRepository DiagramsRepository { get; set; } = null!;
+
+    public record DiagramModel
+    {
+        public Guid Id { get; set; }
+        public string Title { get; set; }
+        public bool Selected { get; set; }
+    }
+
+    [Inject]
+    public NavigationManager NavigationManager { get; set; } = null!;
+
+    FluentDataGrid<Diagram>? grid;
+
+    List<DiagramModel> Diagrams { get; set; } = new();
+
+    IEnumerable<DiagramModel> SelectedItems;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? authenticationState { get; set; }
+
+    public string? UserId { get; set; } = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await authenticationState;
+        var user = authState?.User;
+        if (user?.Identity is not null && user.Identity.IsAuthenticated)
+        {
+            UserId = user.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+
+        await LoadDiagrams();
+    }
+
+    public async Task LoadDiagrams()
+    {
+        var items = await DiagramsRepository.GetDiagrams(UserId);
+        foreach (var item in items)
+        {
+            var modelItem = new DiagramModel();
+            modelItem.Id = item.Id;
+            modelItem.Title = item.Name;
+            Diagrams.Add(modelItem);
+        }
+        SelectedItems = Diagrams.Where(p => p.Selected);
+        StateHasChanged();
+    }
+
+    private async Task Remove(DiagramModel diagram)
+    {
+        IDialogReference dialog = await dialogService.ShowConfirmationAsync(
+            "Are you sure you want to delete diagram?",
+            "Yes",
+            "No",
+            "Delete Diagram?");
+
+        DialogResult? result = await dialog.Result;
+
+        if (result.Cancelled)
+        {
+            return;
+        }
+
+        if (await DiagramsRepository.DeleteDiagram((Guid)diagram.Id!))
+        {
+            Diagrams.Remove(diagram);
+
+            var message = $"Diagram deleted";
+            ToastService.ShowToast(ToastIntent.Info, message);
+        }
+    }
+
+    private async Task NavigateTo(DiagramModel diagram)
+    {
+        NavigationManager.NavigateTo("/diagram/" + diagram.Id);
+    }
+
+    private async Task DeleteSelectedDiagrams()
+    {
+        IDialogReference dialog = await dialogService.ShowConfirmationAsync(
+            "Are you sure you want to delete the selected diagram(s)?",
+            "Yes",
+            "No",
+            "Delete Diagram?");
+
+        DialogResult? result = await dialog.Result;
+
+        if (result.Cancelled)
+        {
+            return;
+        }
+
+        foreach (var d in SelectedItems!.ToList())
+        {
+            await DiagramsRepository.DeleteDiagram((Guid)d.Id!);
+            Diagrams.Remove(d);
+        }
+
+        SelectedItems = Diagrams.Where(p => p.Selected);
+
+        var message = $"Diagram(s) deleted";
+        ToastService.ShowToast(ToastIntent.Info, message);
+    }
+
+    private async Task AddDiagram()
+    {
+        await DiagramsRepository.CreateDiagram(UserId, "New Diagram");
+        var diagrams = await DiagramsRepository.GetDiagrams(UserId);
+        NavigationManager.NavigateTo("/diagram/" + diagrams.Last().Id);
+    }
+}

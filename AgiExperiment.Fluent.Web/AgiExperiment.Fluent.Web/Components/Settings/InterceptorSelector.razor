@@ -1,0 +1,143 @@
+@using Microsoft.Extensions.Options
+@using AgiExperiment.AI.Cortex.Pipeline.Interceptors
+@using AgiExperiment.AI.Cortex.Pipeline
+@using AgiExperiment.AI.Cortex.Settings
+@using System.Security.Claims;
+
+@implements IDisposable
+@implements IDialogContentComponent
+
+@inject IDialogService DialogService;
+
+<div>
+    <FluentSelect Items="@_interceptors"
+    TOption="IInterceptor"
+    Multiple=true
+    OptionText="@(i => i.Name)"
+    OptionValue="@(i => i.Name)"
+    @bind-SelectedOptions="@selectedInterceptors"
+    @bind-SelectedOptions:after="@OnListChanged" />
+</div>
+
+@code {
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
+    public string UserId { get; set; } = null!;
+
+    [Parameter]
+    public string? Class { get; set; }
+
+    [Inject]
+    public IServiceProvider ServiceProvider { get; set; } = null!;
+
+    [Inject]
+    public IOptions<PipelineOptions> Options { get; set; } = null!;
+
+    [Inject] 
+    public required InterceptorConfigurationService InterceptorConfigurationService { get; set; }
+
+    [Inject]
+    public required InterceptorRepository InterceptorRepository { get; set; }
+
+    [Inject]
+    public required SettingsStateNotificationService SettingsStateNotificationService { get; set; }
+
+    private IEnumerable<string>? PreSelected => Options.Value.PreSelectedInterceptors;
+
+    private IEnumerable<IInterceptor> _interceptors = new List<IInterceptor>();
+
+    IEnumerable<IInterceptor>? selectedInterceptors;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState != null)
+        {
+            var authState = await AuthenticationState;
+            var user = authState?.User;
+            if (user?.Identity is not null && user.Identity.IsAuthenticated)
+            {
+                UserId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
+            }
+        }
+
+        _interceptors = await GetAllInterceptors();
+        selectedInterceptors = await GetSelectedInterceptors();
+
+        SettingsStateNotificationService.OnUpdate += SettingsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnListChanged()
+    {
+        if (selectedInterceptors?.Count(i => i is IStateWritingInterceptor) > 1)
+        {
+            await DialogService.ShowErrorAsync("You can only use one hive interceptor at a time.");
+            return;
+        }
+
+        await SetSelectionsInLocalStorage();
+
+        SettingsStateNotificationService.NotifySettingsChanged(new SettingsChangedNotification()
+        {
+            UserId = UserId,
+            Type = typeof(InterceptorSelector)
+        });
+
+        StateHasChanged();
+    }
+
+    private async Task<IEnumerable<string>> GetBrowserSettings() => await InterceptorConfigurationService.GetConfig();
+
+    private async Task SetSelectionsInLocalStorage()
+    { 
+        var selected = selectedInterceptors.Select(i => i.Name);
+        await InterceptorConfigurationService.SaveConfig(selected);
+    }
+
+
+    public void Dispose()
+    {
+        SettingsStateNotificationService.OnUpdate -= SettingsChanged;
+    }
+
+    private async Task SettingsChanged(SettingsChangedNotification obj)
+    {
+        if (obj.UserId == UserId || obj.Type == typeof(InterceptorSelector))
+        {
+            return; 
+        }
+
+        _interceptors = await GetAllInterceptors();
+        selectedInterceptors = await GetSelectedInterceptors();
+
+        StateHasChanged();
+
+        return;
+    }
+
+    private async Task<IEnumerable<IInterceptor>> GetAllInterceptors()
+    {
+        var interceptors = new List<IInterceptor>();
+
+        foreach (var item in InterceptorRepository.LoadAll())
+        {
+            interceptors.Add(item);
+        }
+
+        return interceptors;
+    }
+
+    private async Task<IEnumerable<IInterceptor>> GetSelectedInterceptors()
+    {
+        var settings = await GetBrowserSettings();
+        return _interceptors.Where(i => settings.Contains(i.Name));
+    }
+}

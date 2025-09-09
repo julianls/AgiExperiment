@@ -1,0 +1,125 @@
+﻿@page "/conversation/{ConversationId:guid?}"
+@page "/conversation/{ConversationId:guid?}/{MessageId:guid?}"
+
+@rendermode InteractiveServer
+
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+@using AgiExperiment.Fluent.Web.Components.Settings
+
+@attribute [Authorize]
+
+<!-- Input area -->
+<FluentStack Orientation="Orientation.Horizontal"
+             HorizontalAlignment="HorizontalAlignment.Stretch"
+             VerticalAlignment="VerticalAlignment.Top"
+             HorizontalGap="10"
+             Style="padding: 10px;">
+
+    @if (Conversation.HasStarted())
+    {
+        <PageTitle>@Conversation?.Summary</PageTitle>
+        <h3>Conversation Started</h3>
+    }
+    else
+    {
+        <PageTitle>New Conversation</PageTitle>
+        <h3>New Conversation</h3>
+    }
+    <FluentCombobox Id="combobox-with-long-list"
+                    TOption="Option<string>"
+                    OptionText="@(i => i.Text)"
+                    OptionValue="@(i => i.Value.ToString())"
+                    Items=@modelOptions
+                    @bind-Value="@selectedModelValue"
+                    SelectedOptionChanged="OnSelectedModelChanged">
+    </FluentCombobox>
+
+    <AgiExperiment.Fluent.Web.Components.Settings.InterceptorSettingsButton />
+    <AgiExperiment.Fluent.Web.Components.Settings.PluginSelector.PluginSelectorButton />
+</FluentStack>
+
+<FluentStack Orientation="Orientation.Vertical"
+             HorizontalAlignment="HorizontalAlignment.Center"
+             VerticalAlignment="VerticalAlignment.Bottom"
+             VerticalGap="5"
+             Style="height: 80vh;">
+
+    <!-- Chat messages -->
+    <FluentStack @ref="conversationStack" id="convStackId"
+                 Orientation="Orientation.Vertical"
+                 HorizontalAlignment="HorizontalAlignment.Stretch"
+                 VerticalAlignment="VerticalAlignment.Top"
+                 VerticalGap="10"
+                 Style="overflow-y: auto; flex-grow: 1;">
+        @foreach (var message in Conversation.Messages)
+        {
+            <ConversationMessageDisplay @key="message.Id" Message="message" />
+        }
+    </FluentStack>
+
+    <!-- Input area -->
+    <FluentStack Orientation="Orientation.Horizontal"
+                 HorizontalAlignment="HorizontalAlignment.Stretch"
+                 VerticalAlignment="VerticalAlignment.Bottom"
+                 HorizontalGap="10"
+                 Style="padding: 10px;">
+        <FluentTextArea 
+            @ref="promptTextArea"
+            @bind-Value="@prompt" 
+            Placeholder="Type your message..."
+            Disabled="IsBusy"
+            @oninput="@OnPromptInput"
+            @onkeyup="OnPromptKeyUp"
+            Style="flex-grow: 1;" />
+        @if(IsBusy)
+        {
+            <FluentButton IconStart="@(new Size16.Stop())" OnClick="@CancelSend">Cancel</FluentButton>
+        }
+        else 
+        {
+            <FluentButton IconStart="@(new Size16.Globe())" OnClick="@SendConversation" Disabled="@SendButtonDisabled">
+                Send
+            </FluentButton>
+        }
+    </FluentStack>
+
+    <!-- File area -->
+    <FluentStack Orientation="Orientation.Horizontal"
+                 HorizontalAlignment="HorizontalAlignment.Stretch"
+                 VerticalAlignment="VerticalAlignment.Bottom"
+                 HorizontalGap="10"
+                 Style="padding: 0px;">
+
+        <FluentInputFile @ref="@myFileUploader"
+                         DragDropZoneVisible="false"
+                         Mode="InputFileMode.SaveToTemporaryFolder"
+                         Multiple="true"
+                         AnchorId="MyUploadLoadingButton"
+                         MaximumFileSize="@(100 * 1024 * 1024)"
+                         Accept="@_fileExtensions"
+                         OnProgressChange="@(e =>
+                             {
+                                 _formUploading = true;
+                                 progressPercent = e.ProgressPercent;
+                                 progressTitle = e.ProgressTitle;
+                             })"
+                         OnCompleted="@OnCompleted" />
+
+        <FluentButton Id="MyUploadLoadingButton" Loading="_formUploading" Appearance="Appearance.Accent" aria-label="Attach file" IconEnd="@(new Size16.Attach())" />
+        <FluentProgress Min="0" Max="100" Visible="@(progressPercent > 0)" Value="@progressPercent" />
+
+        @foreach (var file in attachments)
+        {
+            <div style="background-color:#494949; border:1px; border-radius: 20px; padding:10px;">
+                <p>
+                    <b>@file.Name</b> 🔹
+                    @($"{Decimal.Divide(file.Content.LongCount(), 1024):N} KB") 🔹
+                    @file.ContentType
+                </p>
+                <FluentButton aria-label="Delete conversation" IconEnd="@(new Size16.Delete())" OnClick="@(() => RemoveAttachment(file))" />
+            </div>
+        }
+    </FluentStack>
+
+</FluentStack>

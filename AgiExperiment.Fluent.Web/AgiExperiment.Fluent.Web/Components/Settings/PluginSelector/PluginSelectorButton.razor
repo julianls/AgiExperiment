@@ -1,0 +1,127 @@
+ @implements IDisposable
+ 
+ @using AgiExperiment.AI.Cortex.Settings;
+ @using AgiExperiment.AI.Cortex.Settings.PluginSelector;
+ @using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular;
+     
+ @inject IDialogService DialogService;
+
+<FluentCounterBadge Count="@BrowserData?.Count"
+                    Appearance="Appearance.Neutral">
+    <FluentButton Appearance="Appearance.Accent" Disabled="!Enabled" OnClick="OpenSettings">
+        Plugins
+    </FluentButton>
+</FluentCounterBadge>
+
+@code
+{
+    [Parameter]  public string? Class { get; set; }
+    [Parameter]  public bool Enabled { get; set; }
+
+    [Inject] public required PluginsConfigurationService PluginsConfigurationService { get; set; }
+    [Inject] public required InterceptorConfigurationService InterceptorConfigurationService { get; set; }
+
+    [Inject]
+    public required PluginsRepository PluginsRepository { get; set; }
+
+    [Inject]
+    public required SettingsStateNotificationService SettingsStateNotificationService { get; set; }
+
+    List<PluginSelection>? BrowserData { get; set; } = new();
+
+    protected override void  OnInitialized()
+    {
+        SettingsStateNotificationService.OnUpdate += SettingsChanged;
+    }
+
+    private async Task<bool> IsEnabled()
+    {
+        var selectedInterceptors = await InterceptorConfigurationService.GetConfig();
+        return selectedInterceptors.Any(o => o.ToLower().StartsWith("function calling") || o.ToLower().StartsWith("plugins with handlebars"));
+    }
+
+    private async Task SettingsChanged(SettingsChangedNotification arg)
+    {
+        await InvokeAsync(GetSelectionsFromLocalStorage);
+
+        var selectedInterceptors = await InterceptorConfigurationService.GetConfig();
+        if (selectedInterceptors.Any(o => o.ToLower().StartsWith("function calling") || o.ToLower().StartsWith("plugins with handlebars")))
+        {
+            Enabled = true;
+        }
+        else
+        {
+            Enabled = false;
+        }
+
+        await InvokeAsync(StateHasChanged);
+    }
+ 
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            Enabled = await IsEnabled();
+             await GetSelectionsFromLocalStorage();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenSettings()
+    {
+        var data = new List<PluginSelection>();
+        var all = await PluginsRepository.All();
+        foreach (var plugin in all)
+        {
+            var selected = BrowserData.FirstOrDefault(o => o.Name == plugin.Name) != null;
+            data.Add(new PluginSelection() { Name = plugin.Name, Selected = selected });
+        }
+
+        DialogParameters parameters = new()
+            {
+                Title = $"Plugin selection",
+                PrimaryAction = "Ok",
+                PrimaryActionEnabled = false,
+                OnDialogResult = DialogService.CreateDialogCallback(this, OnDialogResult),
+                Width = "500px",
+                Height = "500px",
+                TrapFocus = true,
+                Modal = true,
+                PreventScroll = true
+            };
+
+        await DialogService.ShowDialogAsync<PluginsList>(data, parameters);
+    }
+
+
+    private async Task OnDialogResult(DialogResult result)
+    {
+        if (!result.Cancelled)
+        {
+            var pluginSelection = new List<PluginSelection>();
+
+            foreach (var item in result.Data as List<PluginSelection>)
+            {
+                if (item.Selected)
+                {
+                    pluginSelection.Add(new PluginSelection() { Name = item.Name, Selected = true });
+                }
+            }
+            await PluginsConfigurationService.SaveConfig(pluginSelection);
+
+            await GetSelectionsFromLocalStorage();
+        }
+    }
+
+    private async Task GetSelectionsFromLocalStorage()
+    {
+        BrowserData = await PluginsConfigurationService!.GetConfig();
+        StateHasChanged();
+    }
+
+    public void Dispose()
+    {
+        SettingsStateNotificationService.OnUpdate -= SettingsChanged;
+    }
+}

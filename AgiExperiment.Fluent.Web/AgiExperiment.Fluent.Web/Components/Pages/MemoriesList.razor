@@ -1,0 +1,42 @@
+﻿@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+
+@rendermode InteractiveServer
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <h3>Files</h3>
+        </div>
+        <div class="col">
+            @if (Documents.Any())
+            {
+                <FluentButton Disabled="@(SelectedDocuments == null || !SelectedDocuments.Any())" OnClick="DeleteSelected">Delete selected</FluentButton>
+                <FluentButton OnClick="DeleteAll">Delete All</FluentButton>
+            }
+            @if (_isLoading)
+            {
+                <div>Searching files...</div>
+            }
+        </div>
+    </div>
+</div>
+
+<FluentDataGrid ID="grid" Items="@Documents.AsQueryable()" ShowHover="@true" TGridItem="DocumemntItemModel">
+    <SelectColumn TGridItem="DocumemntItemModel"
+                  SelectMode="@DataGridSelectMode.Multiple"
+                  Property="@(e => e.Selected)"
+                  OnSelect="@(e => e.Item.Selected = e.Selected)"
+                  SelectAll="@(Documents.All(p => p.Selected))"
+                  SelectAllChanged="@(all => Documents.ToList().ForEach(p => p.Selected = (all == true)))" />
+    <PropertyColumn Title="Name" Property="@(c => c!.Name)" Align="Align.Start" />
+    <TemplateColumn Title="Actions" Align="@Align.End">
+@*         <FluentButton aria-label="Load conversation" IconEnd="@(new Size16.Navigation())" OnClick="@(() => NavigateTo(context))" /> *@
+        <FluentButton aria-label="Delete document" IconEnd="@(new Size16.Delete())" OnClick="@(() => DeleteFile(context.DocumentId))" />
+    </TemplateColumn>
+</FluentDataGrid>
+
+@code {
+
+}
