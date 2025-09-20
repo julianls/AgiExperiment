@@ -7,17 +7,19 @@
 @inject IDialogService DialogService
 
 <FluentCounterBadge Count="@BrowserData?.Count" Appearance="Appearance.Neutral">
-    <FluentButton Appearance="Appearance.Accent" OnClick="OpenSettings">
+    <FluentButton Appearance="Appearance.Accent" Disabled="@(!Enabled)" OnClick="OpenSettings">
         MCP
     </FluentButton>
 </FluentCounterBadge>
 
 @code {
     [Parameter] public string? Class { get; set; }
+    [Parameter] public bool Enabled { get; set; }
 
     [Inject] public required McpConfigurationService McpConfigurationService { get; set; }
     [Inject] public required McpRepository McpRepository { get; set; }
     [Inject] public required SettingsStateNotificationService SettingsStateNotificationService { get; set; }
+    [Inject] public required InterceptorConfigurationService InterceptorConfigurationService { get; set; }
 
     List<McpSelection>? BrowserData { get; set; } = new();
 
@@ -26,10 +28,17 @@
         SettingsStateNotificationService.OnUpdate += SettingsChanged;
     }
 
+    private async Task<bool> IsEnabled()
+    {
+        var selectedInterceptors = await InterceptorConfigurationService.GetConfig();
+        return selectedInterceptors.Any(o => o.ToLower().StartsWith("function calling") || o.ToLower().StartsWith("plugins with handlebars"));
+    }
+
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
         if (firstRender)
         {
+            Enabled = await IsEnabled();
             await GetSelectionsFromLocalStorage();
             StateHasChanged();
         }
@@ -89,6 +98,17 @@
     private async Task SettingsChanged(SettingsChangedNotification arg)
     {
         await InvokeAsync(GetSelectionsFromLocalStorage);
+
+        var selectedInterceptors = await InterceptorConfigurationService.GetConfig();
+        if (selectedInterceptors.Any(o => o.ToLower().StartsWith("function calling") || o.ToLower().StartsWith("plugins with handlebars")))
+        {
+            Enabled = true;
+        }
+        else
+        {
+            Enabled = false;
+        }
+
         await InvokeAsync(StateHasChanged);
     }
 
