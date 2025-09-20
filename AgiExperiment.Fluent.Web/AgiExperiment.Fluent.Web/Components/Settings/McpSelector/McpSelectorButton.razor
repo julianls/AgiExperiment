@@ -1,0 +1,99 @@
+@implements IDisposable
+
+@using AgiExperiment.AI.Cortex.Settings
+@using AgiExperiment.AI.Cortex.Settings.McpSelector
+@using Microsoft.FluentUI.AspNetCore.Components.Icons.Regular
+
+@inject IDialogService DialogService
+
+<FluentCounterBadge Count="@BrowserData?.Count" Appearance="Appearance.Neutral">
+    <FluentButton Appearance="Appearance.Accent" OnClick="OpenSettings">
+        MCP
+    </FluentButton>
+</FluentCounterBadge>
+
+@code {
+    [Parameter] public string? Class { get; set; }
+
+    [Inject] public required McpConfigurationService McpConfigurationService { get; set; }
+    [Inject] public required McpRepository McpRepository { get; set; }
+    [Inject] public required SettingsStateNotificationService SettingsStateNotificationService { get; set; }
+
+    List<McpSelection>? BrowserData { get; set; } = new();
+
+    protected override void OnInitialized()
+    {
+        SettingsStateNotificationService.OnUpdate += SettingsChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            await GetSelectionsFromLocalStorage();
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenSettings()
+    {
+        var data = new List<McpSelection>();
+        var all = McpRepository.All();
+        foreach (var srv in all)
+        {
+            var selected = BrowserData.FirstOrDefault(o => o.Name == srv.Name) != null;
+            data.Add(new McpSelection() { Name = srv.Name, Selected = selected });
+        }
+
+        DialogParameters parameters = new()
+        {
+            Title = $"MCP servers selection",
+            PrimaryAction = "Ok",
+            PrimaryActionEnabled = false,
+            OnDialogResult = DialogService.CreateDialogCallback(this, OnDialogResult),
+            Width = "500px",
+            Height = "500px",
+            TrapFocus = true,
+            Modal = true,
+            PreventScroll = true
+        };
+
+        await DialogService.ShowDialogAsync<McpList>(data, parameters);
+    }
+
+    private async Task OnDialogResult(DialogResult result)
+    {
+        if (!result.Cancelled)
+        {
+            var selection = new List<McpSelection>();
+
+            foreach (var item in result.Data as List<McpSelection>)
+            {
+                if (item.Selected)
+                {
+                    selection.Add(new McpSelection() { Name = item.Name, Selected = true });
+                }
+            }
+            await McpConfigurationService.SaveConfig(selection);
+
+            await GetSelectionsFromLocalStorage();
+        }
+    }
+
+    private async Task GetSelectionsFromLocalStorage()
+    {
+        BrowserData = await McpConfigurationService.GetConfig();
+        StateHasChanged();
+    }
+
+    private async Task SettingsChanged(SettingsChangedNotification arg)
+    {
+        await InvokeAsync(GetSelectionsFromLocalStorage);
+        await InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        SettingsStateNotificationService.OnUpdate -= SettingsChanged;
+    }
+}

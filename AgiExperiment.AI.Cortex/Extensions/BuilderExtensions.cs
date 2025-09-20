@@ -3,6 +3,7 @@ using AgiExperiment.AI.Cortex.Pipeline;
 using AgiExperiment.AI.Cortex.Pipeline.Interceptors;
 using AgiExperiment.AI.Cortex.Settings;
 using AgiExperiment.AI.Cortex.Settings.PluginSelector;
+using AgiExperiment.AI.Cortex.Settings.McpSelector;
 using AgiExperiment.AI.Domain.Data;
 using AgiExperiment.AI.Domain.Data.Model;
 using Microsoft.EntityFrameworkCore;
@@ -54,6 +55,8 @@ namespace AgiExperiment.AI.Cortex.Extensions
             services.AddScoped<ModelConfigurationService>();
             services.AddScoped<InterceptorConfigurationService>();
             services.AddScoped<PluginsConfigurationService>();
+            services.AddScoped<McpConfigurationService>();
+            services.AddScoped<McpRepository>();
 
             services.AddSingleton<ConversationTreeState>();
 

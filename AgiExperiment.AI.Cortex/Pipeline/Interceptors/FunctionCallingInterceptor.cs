@@ -6,6 +6,8 @@ using Microsoft.SemanticKernel;
 using Microsoft.SemanticKernel.ChatCompletion;
 using AgiExperiment.AI.Cortex.Common;
 using ModelContextProtocol.Client;
+using AgiExperiment.AI.Cortex.Settings.McpSelector;
+using Microsoft.IdentityModel.Tokens;
 
 namespace AgiExperiment.AI.Cortex.Pipeline.Interceptors;
 
@@ -59,6 +61,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         kernel  = await _kernelService.CreateKernelAsync(config.Provider, config.Model, functionInvocationFilters: [functionFilter, approvalFilter]);
 
         await LoadPluginsAsync(kernel);
+        await LoadMCPsAsync(kernel);
 
         conversation.AddMessage("assistant", "");
         OnUpdate?.Invoke();
@@ -90,6 +93,54 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         }
     }
 
+    private async Task LoadMCPsAsync(Kernel kernel)
+    {
+        var mcpClients = new List<(string Name, IMcpClient Client)>();
+
+        try
+        {
+            if (_localStorageService != null)
+            {
+                var mcpSelections = await _localStorageService.GetItemAsync<List<McpSelection>>(Constants.McpServersKey, _cancellationToken);
+                var selected = mcpSelections?.Where(s => s.Selected).Select(s => s.Name).ToHashSet(StringComparer.OrdinalIgnoreCase)
+                              ?? new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                if (selected.Contains("Playwright"))
+                {
+                    mcpClients.Add(("Playwright", await GetMCPClientForPlaywright()));
+                }
+
+                if (selected.Contains("GitHub"))
+                {
+                    mcpClients.Add(("GitHub", await GetMCPClientForGithub()));
+                }
+
+                if (selected.Contains("AspNetCoreSse") && _mcpClient != null)
+                {
+                    mcpClients.Add(("AspNetCoreSse", _mcpClient));
+                }
+            }
+        }
+        catch
+        {
+            // ignore MCP selection read errors
+        }
+
+        foreach (var entry in mcpClients)
+        {
+            try
+            {
+                var tools = await entry.Client.ListToolsAsync().ConfigureAwait(false);
+                kernel.Plugins.AddFromFunctions(entry.Name,
+                    tools.Select(aiFunction => aiFunction.AsKernelFunction()));
+            }
+            catch
+            {
+                // ignore individual MCP load errors
+            }
+        }
+    }
+
     private async Task LoadPluginsAsync(Kernel kernel)
     {
         var semanticPlugins =  _pluginsRepository.GetSemanticPlugins();
@@ -98,10 +149,13 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         IEnumerable<string> enabledNames = Enumerable.Empty<string>();
         if (_localStorageService != null)
         {
-            pluginsEnabledInSettings = 
+            pluginsEnabledInSettings =
                 await _localStorageService.GetItemAsync<List<Plugin>>(Constants.PluginsKey, _cancellationToken);
-            enabledNames = pluginsEnabledInSettings.Select(o => o.Name);
-            semanticPlugins = semanticPlugins.Where(o => enabledNames.Contains(o.Name)).ToList();
+            if(!pluginsEnabledInSettings.IsNullOrEmpty())
+            {
+                enabledNames = pluginsEnabledInSettings.Select(o => o.Name);
+                semanticPlugins = semanticPlugins.Where(o => enabledNames.Contains(o.Name)).ToList();
+            }
         }
 
         foreach (var plugin in semanticPlugins)
@@ -109,7 +163,6 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
             var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Plugins", plugin.Name);
             kernel.ImportPluginFromPromptDirectory(path, plugin.Name);
         }
-
 
         var nativePlugins = new List<Plugin>();
         nativePlugins.AddRange(_pluginsRepository.GetCoreNative());
@@ -125,7 +178,6 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
 
         foreach (var plugin in nativePlugins)
         {
-
             try
             {
                 string pluginName = plugin.Name.Substring(plugin.Name.LastIndexOf(".", StringComparison.Ordinal) + 1);
@@ -135,42 +187,6 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
             {
                 throw new InvalidOperationException("Could not load native plugins", e);
             }
-        }
-
-        //// kernel memory plugin
-        //var kernelMemoryPlugins = await _pluginsRepository.GetKernelMemoryPlugins();
-        //kernelMemoryPlugins = kernelMemoryPlugins.Where(o => enabledNames.Contains(o.Name)).ToList();
-
-        //foreach (var plugin in kernelMemoryPlugins)
-        //{
-        //    try
-        //    {
-        //        string pluginName = plugin.Name.Substring(plugin.Name.LastIndexOf(".", StringComparison.Ordinal) + 1);
-        //        kernel.ImportPluginFromObject(plugin.Instance, pluginName);
-        //    }
-        //    catch (Exception e)
-        //    {
-        //        throw new InvalidOperationException("Could not load kernel memory plugins", e);
-        //    }
-        //}
-
-        var mcpClients = new List<IMcpClient>();
-        mcpClients.Add(await GetMCPClientForPlaywright());
-        //mcpClients.Add(await GetMCPClientForGithub());
-
-        int idx = 0;
-        foreach (var mcpClient in mcpClients)
-        {
-            // Retrieve the list of tools available on the MCP server
-            var tools = await mcpClient.ListToolsAsync().ConfigureAwait(false);
-            kernel.Plugins.AddFromFunctions($"MCP{idx++}", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
-        }
-
-        if(_mcpClient != null)
-        {
-            // Retrieve the list of tools available on the MyMCP server
-            var tools = await _mcpClient.ListToolsAsync().ConfigureAwait(false);
-            kernel.Plugins.AddFromFunctions($"MyMCP", tools.Select(aiFunction => aiFunction.AsKernelFunction()));
         }
     }
 
