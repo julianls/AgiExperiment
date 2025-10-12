@@ -68,7 +68,7 @@ builder.Services.AddAgiExperiment(builder.Configuration);
 builder.Services.AddScoped<ConversationInterop>();
 
 // add MCP client
-builder.Services.AddScoped<IMcpClient>(sp =>
+builder.Services.AddScoped<McpClient>(sp =>
 {
     McpClientOptions mcpClientOptions = new()
     { ClientInfo = new() { Name = "AspNetCoreSseClient", Version = "1.0.0" } };
@@ -79,13 +79,13 @@ builder.Services.AddScoped<IMcpClient>(sp =>
     var name = $"services__{serviceName}__https__0";
     var url = Environment.GetEnvironmentVariable(name) + "/sse";
 
-    var mcpServerConfig = new SseClientTransport(new()
+    var mcpServerConfig = new HttpClientTransport(new()
     {
         Name = "AspNetCoreSse",
         Endpoint = new Uri(url)
     });
 
-    var mcpClient = McpClientFactory.CreateAsync(mcpServerConfig, mcpClientOptions).GetAwaiter().GetResult();
+    var mcpClient = McpClient.CreateAsync(mcpServerConfig, mcpClientOptions).GetAwaiter().GetResult();
     return mcpClient;
 });
 

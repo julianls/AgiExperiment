@@ -19,7 +19,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
     private readonly PluginsRepository _pluginsRepository;
     private readonly IServiceProvider _serviceProvider;
     private readonly ModelConfigurationService _modelConfigurationService;
-    protected readonly IMcpClient _mcpClient;
+    protected readonly McpClient _mcpClient;
 
     public FunctionCallingInterceptor(IServiceProvider serviceProvider) : base(serviceProvider)
     {
@@ -28,7 +28,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         _localStorageService = _serviceProvider.GetRequiredService<ILocalStorageService>();
         _pluginsRepository = _serviceProvider.GetRequiredService<PluginsRepository>();
         _modelConfigurationService = _serviceProvider.GetRequiredService<ModelConfigurationService>();
-        _mcpClient = _serviceProvider.GetService<IMcpClient>();
+        _mcpClient = _serviceProvider.GetService<McpClient>();
     }
 
     public override string Name { get; } = "Function calling (select plugins)";
@@ -95,7 +95,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
 
     private async Task LoadMCPsAsync(Kernel kernel)
     {
-        var mcpClients = new List<(string Name, IMcpClient Client)>();
+        var mcpClients = new List<(string Name, McpClient Client)>();
 
         try
         {
@@ -190,7 +190,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         }
     }
 
-    public static async Task<IMcpClient> GetMCPClientForPlaywright()
+    public static async Task<McpClient> GetMCPClientForPlaywright()
     {
         McpClientOptions options = new()
         {
@@ -204,7 +204,7 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
             Arguments = ["-y", "@playwright/mcp@latest"],
         });
 
-        var mcpClient = await McpClientFactory.CreateAsync(
+        var mcpClient = await McpClient.CreateAsync(
             config,
             options
             );
@@ -212,10 +212,10 @@ public class FunctionCallingInterceptor : InterceptorBase, IInterceptor
         return mcpClient;
     }
 
-    public static async Task<IMcpClient> GetMCPClientForGithub()
+    public static async Task<McpClient> GetMCPClientForGithub()
     {
         // Create an MCPClient for the GitHub server
-        var mcpClient = await McpClientFactory.CreateAsync(new StdioClientTransport(new()
+        var mcpClient = await McpClient.CreateAsync(new StdioClientTransport(new()
         {
             Name = "GitHub",
             Command = "npx",
