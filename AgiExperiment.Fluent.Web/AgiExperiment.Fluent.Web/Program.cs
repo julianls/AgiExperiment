@@ -106,7 +106,11 @@ else
 
 app.UseHttpsRedirection();
 
-app.UseStaticFiles();
+// Map static assets (replaces UseBlazorFrameworkFiles/UseStaticFiles in mixed server+wasm hosting)
+app.MapStaticAssets();
+
+// Static files from custom folder
+// Note: MapStaticAssets serves wwwroot; keep additional physical files mapping as needed
 app.UseStaticFiles(new StaticFileOptions
 {
     FileProvider = new PhysicalFileProvider(

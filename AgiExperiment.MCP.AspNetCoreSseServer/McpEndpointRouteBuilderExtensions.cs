@@ -19,7 +19,7 @@ public static class McpEndpointRouteBuilderExtensions
             response.Headers.CacheControl = "no-cache";
 
             await using var localTransport = transport = new SseResponseStreamTransport(response.Body);
-            await using var server = McpServerFactory.Create(transport, mcpServerOptions.Value, loggerFactory, endpoints.ServiceProvider);
+            await using var server = McpServer.Create(transport, mcpServerOptions.Value, loggerFactory, endpoints.ServiceProvider);
 
             try
             {
