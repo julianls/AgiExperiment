@@ -1,27 +1,27 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
 	<NoWarn>SKEXP0001,SKEXP0060, SKEXP0010, SKEXP0011, SKEXP0020, SKEXP0027, SKEXP0028, SKEXP0070, CS8981</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Anthropic.SDK" Version="5.5.3" />
+    <PackageReference Include="Anthropic.SDK" Version="5.8.0" />
     <PackageReference Include="Microsoft.KernelMemory.SemanticKernelPlugin" Version="0.98.250508.3" />
-    <PackageReference Include="Microsoft.SemanticKernel" Version="1.65.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.65.0-alpha" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.65.0-alpha" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.65.0" />
-    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Redis" Version="1.65.0-preview" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.65.0-preview" />
-    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.65.0-alpha" />
-    <PackageReference Include="ModelContextProtocol" Version="0.4.0-preview.1" />
+    <PackageReference Include="Microsoft.SemanticKernel" Version="1.68.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.68.0-alpha" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.68.0-alpha" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.68.0" />
+    <PackageReference Include="Microsoft.SemanticKernel.Connectors.Redis" Version="1.68.0-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Core" Version="1.68.0-preview" />
+    <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.68.0-alpha" />
+    <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.1" />
     <PackageReference Include="NPOI" Version="2.7.5" />
-    <PackageReference Include="PdfPig" Version="0.1.12-alpha-20251002-c28d1" />
+    <PackageReference Include="PdfPig" Version="0.1.13-alpha-20251203-c70b3" />
     <PackageReference Include="SharpToken" Version="2.0.4" />
-    <PackageReference Include="Spire.Doc" Version="13.9.10" />
+    <PackageReference Include="Spire.Doc" Version="13.11.5" />
   </ItemGroup>
 
   <ItemGroup>
