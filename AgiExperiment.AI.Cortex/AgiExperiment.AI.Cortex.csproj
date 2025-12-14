@@ -19,9 +19,9 @@
     <PackageReference Include="Microsoft.SemanticKernel.Plugins.Web" Version="1.68.0-alpha" />
     <PackageReference Include="ModelContextProtocol" Version="0.5.0-preview.1" />
     <PackageReference Include="NPOI" Version="2.7.5" />
-    <PackageReference Include="PdfPig" Version="0.1.13-alpha-20251203-c70b3" />
+    <PackageReference Include="PdfPig" Version="0.1.13-alpha-20251207-ee0cb" />
     <PackageReference Include="SharpToken" Version="2.0.4" />
-    <PackageReference Include="Spire.Doc" Version="13.11.5" />
+    <PackageReference Include="Spire.Doc" Version="13.12.3" />
   </ItemGroup>
 
   <ItemGroup>
