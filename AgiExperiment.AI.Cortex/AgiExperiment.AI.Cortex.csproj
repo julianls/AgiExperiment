@@ -21,7 +21,7 @@
     <PackageReference Include="NPOI" Version="2.7.5" />
     <PackageReference Include="PdfPig" Version="0.1.13-alpha-20251207-ee0cb" />
     <PackageReference Include="SharpToken" Version="2.0.4" />
-    <PackageReference Include="Spire.Doc" Version="13.12.3" />
+    <PackageReference Include="Spire.Doc" Version="13.12.6" />
   </ItemGroup>
 
   <ItemGroup>

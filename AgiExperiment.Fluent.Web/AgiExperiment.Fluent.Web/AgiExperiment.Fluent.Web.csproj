@@ -20,7 +20,7 @@
     <ProjectReference Include="..\..\AgiExperiment.AI.Domain\AgiExperiment.AI.Domain.csproj" />
     <ProjectReference Include="..\..\AgiExperiment.ServiceDefaults\AgiExperiment.ServiceDefaults.csproj" />
     <ProjectReference Include="..\AgiExperiment.Fluent.Web.Client\AgiExperiment.Fluent.Web.Client.csproj" />
-    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.0.2" />
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.1.0" />
     <PackageReference Include="Markdig" Version="0.44.0" />
     <PackageReference Include="Markdown.ColorCode" Version="3.0.1" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.1" />
