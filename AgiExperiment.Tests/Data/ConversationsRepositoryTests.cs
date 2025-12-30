@@ -10,27 +10,25 @@ public class ConversationsRepositoryTests
 {
     private Mock<IDbContextFactory<AiExperimentDBContext>> _mockDbContextFactory;
     private Mock<QuickProfileRepository> _mockQuickProfileRepository;
-    private AiExperimentDBContext _dbContext;
+    private DbContextOptions<AiExperimentDBContext> _options;
     private ConversationsRepository _repository;
 
     [SetUp]
     public void SetUp()
     {
         // Use in-memory database for testing
-        var options = new DbContextOptionsBuilder<AiExperimentDBContext>()
+        _options = new DbContextOptionsBuilder<AiExperimentDBContext>()
             .UseInMemoryDatabase(databaseName: Guid.NewGuid().ToString())
             .Options;
-
-        _dbContext = new AiExperimentDBContext(options);
         
         _mockDbContextFactory = new Mock<IDbContextFactory<AiExperimentDBContext>>();
         _mockDbContextFactory
             .Setup(f => f.CreateDbContextAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(_dbContext);
+            .ReturnsAsync(() => new AiExperimentDBContext(_options));
         
         _mockDbContextFactory
             .Setup(f => f.CreateDbContext())
-            .Returns(_dbContext);
+            .Returns(() => new AiExperimentDBContext(_options));
 
         _mockQuickProfileRepository = new Mock<QuickProfileRepository>(
             _mockDbContextFactory.Object);
@@ -38,12 +36,6 @@ public class ConversationsRepositoryTests
         _repository = new ConversationsRepository(
             _mockDbContextFactory.Object,
             _mockQuickProfileRepository.Object);
-    }
-
-    [TearDown]
-    public void TearDown()
-    {
-        _dbContext?.Dispose();
     }
 
     [Test]
@@ -66,7 +58,10 @@ public class ConversationsRepositoryTests
         // Assert
         Assert.That(result, Is.Not.Null);
         Assert.That(result.Id, Is.Not.Null);
-        var saved = await _dbContext.Conversations.FindAsync(result.Id);
+        
+        // Create a new context to verify the save
+        using var verifyContext = new AiExperimentDBContext(_options);
+        var saved = await verifyContext.Conversations.FindAsync(result.Id);
         Assert.That(saved, Is.Not.Null);
         Assert.That(saved.Summary, Is.EqualTo("Test conversation"));
     }
@@ -98,8 +93,11 @@ public class ConversationsRepositoryTests
             DateStarted = DateTime.Now
         };
 
-        await _dbContext.Conversations.AddRangeAsync(conversation1, conversation2, conversation3);
-        await _dbContext.SaveChangesAsync();
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddRangeAsync(conversation1, conversation2, conversation3);
+            await setupContext.SaveChangesAsync();
+        }
 
         // Act
         var result = await _repository.GetConversationsByUserId(userId);
@@ -130,8 +128,11 @@ public class ConversationsRepositoryTests
             DateStarted = DateTime.Now
         };
 
-        await _dbContext.Conversations.AddRangeAsync(conversationWithSummary, conversationWithoutSummary);
-        await _dbContext.SaveChangesAsync();
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddRangeAsync(conversationWithSummary, conversationWithoutSummary);
+            await setupContext.SaveChangesAsync();
+        }
 
         // Act
         var result = await _repository.GetConversationsByUserId(userId);
@@ -146,18 +147,21 @@ public class ConversationsRepositoryTests
     {
         // Arrange
         var userId = "test-user";
-        for (int i = 0; i < 15; i++)
+        using (var setupContext = new AiExperimentDBContext(_options))
         {
-            var conversation = new Conversation
+            for (int i = 0; i < 15; i++)
             {
-                Model = "gpt-4",
-                UserId = userId,
-                Summary = $"Conversation {i}",
-                DateStarted = DateTime.Now.AddDays(-i)
-            };
-            await _dbContext.Conversations.AddAsync(conversation);
+                var conversation = new Conversation
+                {
+                    Model = "gpt-4",
+                    UserId = userId,
+                    Summary = $"Conversation {i}",
+                    DateStarted = DateTime.Now.AddDays(-i)
+                };
+                await setupContext.Conversations.AddAsync(conversation);
+            }
+            await setupContext.SaveChangesAsync();
         }
-        await _dbContext.SaveChangesAsync();
 
         // Act
         var result = await _repository.GetConversationsByUserIdSimple(userId, 10);
@@ -179,15 +183,20 @@ public class ConversationsRepositoryTests
             Summary = "Original summary",
             DateStarted = DateTime.Now
         };
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddAsync(conversation);
+            await setupContext.SaveChangesAsync();
+        }
 
         // Act
         conversation.Summary = "Updated summary";
         await _repository.UpdateConversation(conversation);
 
         // Assert
-        var updated = await _dbContext.Conversations.FindAsync(conversation.Id);
+        using var verifyContext = new AiExperimentDBContext(_options);
+        var updated = await verifyContext.Conversations.FindAsync(conversation.Id);
         Assert.That(updated.Summary, Is.EqualTo("Updated summary"));
     }
 
@@ -211,14 +220,18 @@ public class ConversationsRepositoryTests
             DateStarted = DateTime.Now
         };
 
-        await _dbContext.Conversations.AddRangeAsync(conversation1, conversation2);
-        await _dbContext.SaveChangesAsync();
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddRangeAsync(conversation1, conversation2);
+            await setupContext.SaveChangesAsync();
+        }
 
         // Act
         await _repository.DeleteConversationsByUserId(userId);
 
         // Assert
-        var remaining = await _dbContext.Conversations
+        using var verifyContext = new AiExperimentDBContext(_options);
+        var remaining = await verifyContext.Conversations
             .Where(c => c.UserId == userId)
             .ToListAsync();
         Assert.That(remaining.Count, Is.EqualTo(0));
@@ -238,8 +251,11 @@ public class ConversationsRepositoryTests
         conversation.AddMessage("system", "System message");
         conversation.AddMessage("user", "User message");
 
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddAsync(conversation);
+            await setupContext.SaveChangesAsync();
+        }
 
         // Act
         var result = await _repository.GetConversation(conversation.Id);
@@ -272,8 +288,12 @@ public class ConversationsRepositoryTests
             DateStarted = DateTime.Now
         };
         conversation.AddMessage("user", "Original content");
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddAsync(conversation);
+            await setupContext.SaveChangesAsync();
+        }
 
         var messageId = conversation.Messages[0].Id.Value;
 
@@ -281,7 +301,8 @@ public class ConversationsRepositoryTests
         await _repository.UpdateMessageContent(messageId, "Updated content");
 
         // Assert
-        var updated = await _dbContext.Messages.FindAsync(messageId);
+        using var verifyContext = new AiExperimentDBContext(_options);
+        var updated = await verifyContext.Messages.FindAsync(messageId);
         Assert.That(updated.Content, Is.EqualTo("Updated content"));
     }
 
@@ -297,8 +318,12 @@ public class ConversationsRepositoryTests
             DateStarted = DateTime.Now
         };
         conversation.AddMessage("user", "Test message");
-        await _dbContext.Conversations.AddAsync(conversation);
-        await _dbContext.SaveChangesAsync();
+        
+        using (var setupContext = new AiExperimentDBContext(_options))
+        {
+            await setupContext.Conversations.AddAsync(conversation);
+            await setupContext.SaveChangesAsync();
+        }
 
         var messageId = conversation.Messages[0].Id.Value;
 
