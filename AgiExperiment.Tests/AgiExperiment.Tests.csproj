@@ -11,7 +11,9 @@
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Testing" Version="13.1.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.1" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+    <PackageReference Include="Moq" Version="4.20.72" />
     <PackageReference Include="NUnit" Version="4.4.0" />
     <PackageReference Include="NUnit.Analyzers" Version="4.11.2">
       <PrivateAssets>all</PrivateAssets>
@@ -21,6 +23,8 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\AgiExperiment.AI.Cortex\AgiExperiment.AI.Cortex.csproj" />
+    <ProjectReference Include="..\AgiExperiment.AI.Domain\AgiExperiment.AI.Domain.csproj" />
     <ProjectReference Include="..\AgiExperiment.AppHost\AgiExperiment.AppHost.csproj" />
   </ItemGroup>
 
