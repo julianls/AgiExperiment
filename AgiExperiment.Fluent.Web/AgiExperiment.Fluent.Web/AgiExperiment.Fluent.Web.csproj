@@ -20,22 +20,22 @@
     <ProjectReference Include="..\..\AgiExperiment.AI.Domain\AgiExperiment.AI.Domain.csproj" />
     <ProjectReference Include="..\..\AgiExperiment.ServiceDefaults\AgiExperiment.ServiceDefaults.csproj" />
     <ProjectReference Include="..\AgiExperiment.Fluent.Web.Client\AgiExperiment.Fluent.Web.Client.csproj" />
-    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.1.0" />
-    <PackageReference Include="Markdig" Version="0.44.0" />
+    <PackageReference Include="Aspire.StackExchange.Redis.OutputCaching" Version="13.1.3" />
+    <PackageReference Include="Markdig" Version="1.1.1" />
     <PackageReference Include="Markdown.ColorCode" Version="3.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.1" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.1">
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.Server" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.5" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="10.0.5">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.13.2" />
-    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.13.2" />
-    <PackageReference Include="Z.Blazor.Diagrams" Version="3.0.3" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.14.0" />
+    <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components.Icons" Version="4.14.0" />
+    <PackageReference Include="Z.Blazor.Diagrams" Version="3.0.4.1" />
   </ItemGroup>
 </Project>
